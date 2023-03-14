@@ -108,14 +108,30 @@ app.post("/api/users/:_id/exercises", async (req, res, next) => {
 
 app.get("/api/users/:_id/logs", async (req, res, next) => {
   try {
-    const userId = req.params._id;
+    const userId = mongoose.Types.ObjectId(req.params._id);
+    const query = { userId };
+    const { from, to } = req.query;
+    let { limit } = req.query;
+    if (from || to) {
+      query.date = {};
+
+      if (from) {
+        query.date.$gte = new Date(from);
+      }
+      if (to) {
+        query.date.$lte = new Date(to);
+      }
+    }
+    if (!limit) {
+      limit = 100;
+    }
     const { username } = await User.findById(userId);
     if (!username) {
       res.json({ message: "No user with that id found" });
     }
-
-    const exercices = await Exercise.find({ userId });
-    exercises = exercices.map((exercices) => {
+    let exercices = await Exercise.find(query).limit(limit);
+    console.log(exercices);
+    exercices = exercices.map((exercices) => {
       return {
         description: exercices.description,
         duration: exercices.duration,
@@ -126,7 +142,7 @@ app.get("/api/users/:_id/logs", async (req, res, next) => {
       username: username,
       count: exercices.length,
       _id: userId,
-      log: exercises,
+      log: exercices,
     });
   } catch (error) {
     next(error);
